@@ -51,11 +51,8 @@ input  [127:0]     C_data_out;
 
 //* Implement your design here
 
-/******** matrix parameters ********/
-reg [7:0] k, m, n;
-
 /******** state definition ********/
-reg [2:0] state, state_nxt;
+reg [2:0] state,state_nxt;
 parameter [2:0] IDLE 	= 3'd0,
                 LOAD 	= 3'd1,
                 EXE  	= 3'd2,
@@ -83,16 +80,14 @@ wire [7:0] right_wire2 [2:0];
 wire [7:0] right_wire3 [2:0];
 
 /******** output buffer ********/
-wire [31:0] C [3:0][3:0];
+reg [31:0] C [3:0][3:0];
 
 /******** control register ********/
 integer i,j;
 reg go_pe;
 reg clear_pe;
-reg [7:0] load_counter, exe_counter;
+reg [3:0] load_counter, exe_counter;
 reg [15:0]  C_index_nxt;
-reg [15:0]  A_index_counter, B_index_counter, C_index_counter;
-reg output_done;
 
 /******** PR declaration ********/
 PE pe00(.clk(clk), .rst_n(rst_n), 
@@ -160,14 +155,15 @@ PE pe33(.clk(clk), .rst_n(rst_n),
         .out_right(), .out_down(), .result(C[3][3]), .go(go_pe), .clear(clear_pe)
         );
 
-
-reg TPU_done;
 /******** combinational circuit ********/	
 always @(*) begin
     if (in_valid) begin
-        busy = 1;
-    end else if (TPU_done) begin
-        busy = 0;
+        busy <= 1;
+        state <= LOAD;
+        load_counter <= 0;
+        exe_counter <= 0;
+        C_index_nxt <= 0;
+        clear_pe <= 1;
     end
 end
 
@@ -175,7 +171,7 @@ end
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         busy <= 0;
-        state_nxt <= IDLE;
+        state <= IDLE;
         A_wr_en <= 0;
         B_wr_en <= 0;
         C_wr_en <= 0;
@@ -187,76 +183,39 @@ always @(posedge clk or negedge rst_n) begin
         exe_counter  <= 0;
         C_index_nxt <= 0;
         clear_pe <= 1;
-        k <= 0;
-        m <= 0;
-        n <= 0;
-        A_index_counter <= 0;
-        B_index_counter <= 0;
-        C_index_counter <= 0;
-        output_done <= 0;
-        TPU_done <= 0;
     end else begin
-        state = state_nxt;
         case (state)
             IDLE: begin
-                if (busy == 1) begin
-                    state_nxt <= LOAD;
-                    load_counter <= 0;
-                    exe_counter <= 0;
-                    C_index_nxt <= 0;
-                    clear_pe <= 1;
-                    k <= K;
-                    m <= M;
-                    n <= N;
-                    A_index_counter <= 0;
-                    B_index_counter <= 0;
-                    C_index_counter <= 0;
-                    output_done <= 0;
-                    TPU_done <= 0;
-                    A_index <= 0;
-                    B_index <= 0;
-                end else begin
-                    state_nxt <= IDLE;
-                end
+                busy <= 0;
+                A_index <= 0;
+                B_index <= 0;
+                load_counter <= 0;
+                exe_counter  <= 0;
+                C_index_nxt <= 0;
+                go_pe <= 0;
+                clear_pe <= 1;
             end
             LOAD: begin
                 go_pe <= 0;
                 clear_pe <= 0;
-                if ((load_counter % 4) == 0) begin
+                if (load_counter == 0) begin
                     {left_buf0_A[0], left_buf1_A[1], left_buf2_A[2], left_buf3_A[3]} <= {A_data_out};
-                    { top_buf0_B[0],  top_buf1_B[1],  top_buf2_B[2],  top_buf3_B[3]} <= {B_data_out};
-                    A_index <= A_index_counter + load_counter + 1;
-                    B_index <= B_index_counter + load_counter + 1;
-                end else if ((load_counter % 4) == 1) begin
-                    if (load_counter < k) begin
-                        {left_buf0_A[1], left_buf1_A[2], left_buf2_A[3], left_buf3_A[4]} <= {A_data_out};
-                        { top_buf0_B[1],  top_buf1_B[2],  top_buf2_B[3],  top_buf3_B[4]} <= {B_data_out};
-                        A_index <= A_index_counter + load_counter + 1;
-                        B_index <= B_index_counter + load_counter + 1;
-                    end else begin
-                        {left_buf0_A[1], left_buf1_A[2], left_buf2_A[3], left_buf3_A[4]} <= {32'd0};
-                        { top_buf0_B[1],  top_buf1_B[2],  top_buf2_B[3],  top_buf3_B[4]} <= {32'd0};
-                    end
-                end else if ((load_counter % 4) == 2) begin
-                    if (load_counter < k) begin
-                        {left_buf0_A[2], left_buf1_A[3], left_buf2_A[4], left_buf3_A[5]} <= {A_data_out};
-                        { top_buf0_B[2],  top_buf1_B[3],  top_buf2_B[4],  top_buf3_B[5]} <= {B_data_out};
-                        A_index <= A_index_counter + load_counter + 1;
-                        B_index <= B_index_counter + load_counter + 1;
-                    end else begin
-                        {left_buf0_A[2], left_buf1_A[3], left_buf2_A[4], left_buf3_A[5]} <= {32'd0};
-                        { top_buf0_B[2],  top_buf1_B[3],  top_buf2_B[4],  top_buf3_B[5]} <= {32'd0};
-                    end
-                end else if ((load_counter % 4) == 3) begin
-                    if (load_counter < k) begin
-                        {left_buf0_A[3], left_buf1_A[4], left_buf2_A[5], left_buf3_A[6]} <= {A_data_out};
-                        { top_buf0_B[3],  top_buf1_B[4],  top_buf2_B[5],  top_buf3_B[6]} <= {B_data_out};
-                        A_index <= A_index_counter + load_counter + 1;
-                        B_index <= B_index_counter + load_counter + 1;
-                    end else begin
-                        {left_buf0_A[3], left_buf1_A[4], left_buf2_A[5], left_buf3_A[6]} <= {32'd0};
-                        { top_buf0_B[3],  top_buf1_B[4],  top_buf2_B[5],  top_buf3_B[6]} <= {32'd0};
-                    end
+                    {top_buf0_B[0], top_buf1_B[1], top_buf2_B[2], top_buf3_B[3]}  <= {B_data_out};
+                    A_index <= 1;
+                    B_index <= 1;
+                end else if (load_counter == 1) begin
+                    {left_buf0_A[1], left_buf1_A[2], left_buf2_A[3], left_buf3_A[4]} <= {A_data_out};
+                    {top_buf0_B[1], top_buf1_B[2], top_buf2_B[3], top_buf3_B[4]}  <= {B_data_out};
+                    A_index <= 2;
+                    B_index <= 2;
+                end else if (load_counter == 2) begin
+                    {left_buf0_A[2], left_buf1_A[3], left_buf2_A[4], left_buf3_A[5]} <= {A_data_out};
+                    {top_buf0_B[2], top_buf1_B[3], top_buf2_B[4], top_buf3_B[5]}  <= {B_data_out};
+                    A_index <= 3;
+                    B_index <= 3;
+                end else if (load_counter == 3) begin
+                    {left_buf0_A[3], left_buf1_A[4], left_buf2_A[5], left_buf3_A[6]} <= {A_data_out};
+                    {top_buf0_B[3], top_buf1_B[4], top_buf2_B[5], top_buf3_B[6]}  <= {B_data_out};
 
                     {left_buf0_A[4], left_buf0_A[5], left_buf0_A[6]} <= {24'd0};
                     {left_buf1_A[0], left_buf1_A[5], left_buf1_A[6]} <= {24'd0};
@@ -267,8 +226,8 @@ always @(posedge clk or negedge rst_n) begin
                     {top_buf1_B[0], top_buf1_B[5], top_buf1_B[6]} <= {24'd0};
                     {top_buf2_B[0], top_buf2_B[1], top_buf2_B[6]} <= {24'd0};
                     {top_buf3_B[0], top_buf3_B[1], top_buf3_B[2]} <= {24'd0};
-
-                    state_nxt <= EXE;
+                end else begin
+                    state <= EXE;
                 end
                 load_counter <= load_counter + 1;
             end
@@ -295,77 +254,39 @@ always @(posedge clk or negedge rst_n) begin
                 end
                 exe_counter <= exe_counter + 1;
                 if (exe_counter == 10) begin
-                    if (load_counter < k) begin
-                        state_nxt <= LOAD;
-                    end else begin
-                        A_index_counter <= A_index_counter + k;
-                        B_index_counter <= B_index_counter + k;
-                        state_nxt <= OUTPUT;
-                    end
+                    state = OUTPUT;
                     go_pe <= 0;
-                    exe_counter <= 0;
                 end
             end
             OUTPUT: begin
                 go_pe <= 0;
                 C_wr_en <= 1;
                 C_index <= C_index_nxt;
-                if (!output_done) begin
-                    case (C_index_counter)
-                        0: begin
-                            if ({C[0][0], C[0][1], C[0][2], C[0][3]} != 128'd0) begin
-                                C_data_in <= {C[0][0], C[0][1], C[0][2], C[0][3]};
-                                C_index_nxt <= C_index_nxt + 1; 
-                            end
-                            C_index_counter <= C_index_counter + 1;
-                        end
-                        1: begin
-                            if ({C[1][0], C[1][1], C[1][2], C[1][3]} != 128'd0) begin
-                                C_data_in <= {C[1][0], C[1][1], C[1][2], C[1][3]};
-                                C_index_nxt <= C_index_nxt + 1;
-                            end
-                            C_index_counter <= C_index_counter + 1;
-                        end
-                        2: begin
-                            if ({C[2][0], C[2][1], C[2][2], C[2][3]} != 128'd0) begin
-                                C_data_in <= {C[2][0], C[2][1], C[2][2], C[2][3]};
-                                C_index_nxt <= C_index_nxt + 1; 
-                            end
-                            C_index_counter <= C_index_counter + 1;
-                        end
-                        3: begin
-                            if ({C[3][0], C[3][1], C[3][2], C[3][3]} != 128'd0) begin
-                                C_data_in <= {C[3][0], C[3][1], C[3][2], C[3][3]};
-                                C_index_nxt <= C_index_nxt + 1;
-                            end
-                            output_done <= 1;
-                        end
-                    endcase
-                end else begin
-                    if ((A_index_counter*4) < (m*k)) begin
-                        state_nxt <= LOAD;
-                        load_counter <= 0;
-                        exe_counter  <= 0;
-                        B_index <= B_index_counter - k;
-                        B_index_counter <= B_index_counter - k;
-                        clear_pe <= 1;
-                    end else if ((B_index_counter*4) < (n*k)) begin
-                        state_nxt <= LOAD;
-                        load_counter <= 0;
-                        exe_counter  <= 0;
-                        A_index <= 0;
-                        A_index_counter <= 0;
-                        clear_pe <= 1;
-                    end else begin
+                case (C_index)
+                    0: begin
+                        C_data_in <= {C[0][0], C[0][1], C[0][2], C[0][3]};
+                        C_index_nxt <= 1; 
+                    end
+                    1: begin
+                        C_data_in <= {C[1][0], C[1][1], C[1][2], C[1][3]};
+                        C_index_nxt <= 2; 
+                    end
+                    2: begin
+                        C_data_in <= {C[2][0], C[2][1], C[2][2], C[2][3]};
+                        C_index_nxt <= 3; 
+                    end
+                    3: begin
+                        C_data_in <= {C[3][0], C[3][1], C[3][2], C[3][3]};
+                        C_index_nxt <= 4; 
+                    end
+                    4: begin
                         C_wr_en <= 0;
                         C_index <= 0;
                         C_index_nxt <= 0;
-                        TPU_done <= 1;
-                        state_nxt <= IDLE;
+                        busy <= 0;
+                        state <= IDLE;
                     end
-                    output_done <= 0;
-                    C_index_counter <= 0;
-                end
+                endcase
             end
         endcase
     end

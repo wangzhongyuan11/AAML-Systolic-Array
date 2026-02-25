@@ -83,7 +83,7 @@ wire [7:0] right_wire2 [2:0];
 wire [7:0] right_wire3 [2:0];
 
 /******** output buffer ********/
-wire [31:0] C [3:0][3:0];
+reg [31:0] C [3:0][3:0];
 
 /******** control register ********/
 integer i,j;
@@ -160,14 +160,22 @@ PE pe33(.clk(clk), .rst_n(rst_n),
         .out_right(), .out_down(), .result(C[3][3]), .go(go_pe), .clear(clear_pe)
         );
 
-
-reg TPU_done;
 /******** combinational circuit ********/	
 always @(*) begin
     if (in_valid) begin
-        busy = 1;
-    end else if (TPU_done) begin
-        busy = 0;
+        busy <= 1;
+        state_nxt <= LOAD;
+        load_counter <= 0;
+        exe_counter <= 0;
+        C_index_nxt <= 0;
+        clear_pe <= 1;
+        k <= K;
+        m <= M;
+        n <= N;
+        A_index_counter <= 0;
+        B_index_counter <= 0;
+        C_index_counter <= 0;
+        output_done <= 0;
     end
 end
 
@@ -194,30 +202,23 @@ always @(posedge clk or negedge rst_n) begin
         B_index_counter <= 0;
         C_index_counter <= 0;
         output_done <= 0;
-        TPU_done <= 0;
     end else begin
         state = state_nxt;
         case (state)
             IDLE: begin
-                if (busy == 1) begin
-                    state_nxt <= LOAD;
-                    load_counter <= 0;
-                    exe_counter <= 0;
-                    C_index_nxt <= 0;
-                    clear_pe <= 1;
-                    k <= K;
-                    m <= M;
-                    n <= N;
-                    A_index_counter <= 0;
-                    B_index_counter <= 0;
-                    C_index_counter <= 0;
-                    output_done <= 0;
-                    TPU_done <= 0;
-                    A_index <= 0;
-                    B_index <= 0;
-                end else begin
-                    state_nxt <= IDLE;
-                end
+                busy <= 0;
+                A_index <= 0;
+                B_index <= 0;
+                load_counter <= 0;
+                exe_counter  <= 0;
+                C_index_nxt <= 0;
+                go_pe <= 0;
+                clear_pe <= 1;
+                A_index_counter <= 0;
+                B_index_counter <= 0;
+                C_index_counter <= 0;
+                output_done <= 0;
+                state_nxt <= IDLE;
             end
             LOAD: begin
                 go_pe <= 0;
@@ -342,14 +343,14 @@ always @(posedge clk or negedge rst_n) begin
                         end
                     endcase
                 end else begin
-                    if ((A_index_counter*4) < (m*k)) begin
+                    if ((A_index_counter/k*4) < m) begin
                         state_nxt <= LOAD;
                         load_counter <= 0;
                         exe_counter  <= 0;
                         B_index <= B_index_counter - k;
                         B_index_counter <= B_index_counter - k;
                         clear_pe <= 1;
-                    end else if ((B_index_counter*4) < (n*k)) begin
+                    end else if ((B_index_counter/k*4) < n) begin
                         state_nxt <= LOAD;
                         load_counter <= 0;
                         exe_counter  <= 0;
@@ -360,7 +361,7 @@ always @(posedge clk or negedge rst_n) begin
                         C_wr_en <= 0;
                         C_index <= 0;
                         C_index_nxt <= 0;
-                        TPU_done <= 1;
+                        busy <= 0;
                         state_nxt <= IDLE;
                     end
                     output_done <= 0;
