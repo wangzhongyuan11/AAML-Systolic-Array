@@ -313,31 +313,39 @@ always @(posedge clk or negedge rst_n) begin
                 if (!output_done) begin
                     case (C_index_counter)
                         0: begin
-                            if ({C[0][0], C[0][1], C[0][2], C[0][3]} != 128'd0) begin
-                                C_data_in <= {C[0][0], C[0][1], C[0][2], C[0][3]};
-                                C_index_nxt <= C_index_nxt + 1; 
-                            end
+                            // if ({C[0][0], C[0][1], C[0][2], C[0][3]} != 128'd0) begin
+                            //     C_data_in <= {C[0][0], C[0][1], C[0][2], C[0][3]};
+                            //     C_index_nxt <= C_index_nxt + 1; 
+                            // end
+                            C_data_in <= {C[0][0], C[0][1], C[0][2], C[0][3]};
+                            C_index_nxt <= C_index_nxt + 1; 
                             C_index_counter <= C_index_counter + 1;
                         end
                         1: begin
-                            if ({C[1][0], C[1][1], C[1][2], C[1][3]} != 128'd0) begin
-                                C_data_in <= {C[1][0], C[1][1], C[1][2], C[1][3]};
-                                C_index_nxt <= C_index_nxt + 1;
-                            end
+                            // if ({C[1][0], C[1][1], C[1][2], C[1][3]} != 128'd0) begin
+                            //     C_data_in <= {C[1][0], C[1][1], C[1][2], C[1][3]};
+                            //     C_index_nxt <= C_index_nxt + 1;
+                            // end
+                            C_data_in <= {C[1][0], C[1][1], C[1][2], C[1][3]};
+                            C_index_nxt <= C_index_nxt + 1;
                             C_index_counter <= C_index_counter + 1;
                         end
                         2: begin
-                            if ({C[2][0], C[2][1], C[2][2], C[2][3]} != 128'd0) begin
-                                C_data_in <= {C[2][0], C[2][1], C[2][2], C[2][3]};
-                                C_index_nxt <= C_index_nxt + 1; 
-                            end
+                            // if ({C[2][0], C[2][1], C[2][2], C[2][3]} != 128'd0) begin
+                            //     C_data_in <= {C[2][0], C[2][1], C[2][2], C[2][3]};
+                            //     C_index_nxt <= C_index_nxt + 1; 
+                            // end
+                            C_data_in <= {C[2][0], C[2][1], C[2][2], C[2][3]};
+                            C_index_nxt <= C_index_nxt + 1;  
                             C_index_counter <= C_index_counter + 1;
                         end
                         3: begin
-                            if ({C[3][0], C[3][1], C[3][2], C[3][3]} != 128'd0) begin
-                                C_data_in <= {C[3][0], C[3][1], C[3][2], C[3][3]};
-                                C_index_nxt <= C_index_nxt + 1;
-                            end
+                            // if ({C[3][0], C[3][1], C[3][2], C[3][3]} != 128'd0) begin
+                            //     C_data_in <= {C[3][0], C[3][1], C[3][2], C[3][3]};
+                            //     C_index_nxt <= C_index_nxt + 1;
+                            // end
+                            C_data_in <= {C[3][0], C[3][1], C[3][2], C[3][3]};
+                            C_index_nxt <= C_index_nxt + 1;
                             output_done <= 1;
                         end
                     endcase

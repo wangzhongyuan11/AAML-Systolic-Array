@@ -90,7 +90,7 @@ TPU My_TPU(
     .C_wr_en        (C_wr_en),         
     .C_index        (C_index),         
     .C_data_in      (C_data_in),         
-    .C_data_out     (C_data_out)         
+    .C_data_out     (C_data_out) 
 );
 
 
